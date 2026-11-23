@@ -1,0 +1,5 @@
+extends: default
+rules:
+  # Actions pinned by SHA, with the tag in a comment, pass 80 characters.
+  line-length:
+    max: 120
