@@ -1,11 +1,18 @@
 # Dragging on `mo.ui.matplotlib`
 
-`mo.ui.matplotlib` renders a `<canvas>`. Drag a box on it with the mouse, using fractions of the canvas size.
+`mo.ui.matplotlib` renders a `<canvas>` inside a `marimo-matplotlib` element. Drag a box on it with the mouse, using fractions of the canvas size.
+
+Find the canvas through `marimo-matplotlib`, not a bare `canvas`: other outputs on the page can draw canvases too. The widget has no `label`, so pick a plot by its order on the page, from 0. A plot added above it shifts the number.
 
 ```python
-def drag_box(page, x0, y0, x1, y1):
+def plot_canvas(page, plot=0):
+    """The canvas of the ``plot``-th ``mo.ui.matplotlib`` on the page, from 0."""
+    return page.locator("marimo-matplotlib").nth(plot).locator("canvas")
+
+
+def drag_box(page, x0, y0, x1, y1, plot=0):
     """Coordinates are fractions of the canvas."""
-    canvas = page.locator("canvas").first
+    canvas = plot_canvas(page, plot)
     canvas.scroll_into_view_if_needed()  # see the scroll gotcha below
     b = canvas.bounding_box()
     page.mouse.move(b["x"] + x0 * b["width"], b["y"] + y0 * b["height"])
@@ -32,9 +39,9 @@ def drag_box(page, x0, y0, x1, y1):
 The canvas holds only pixels, so read them to check that a box is drawn. `locator.evaluate` runs on the element itself, so it reaches the canvas inside marimo's shadow root.
 
 ```python
-def pixel(page, fx, fy):
+def pixel(page, fx, fy, plot=0):
     """[r, g, b] at fraction (fx, fy) of the canvas."""
-    return page.locator("canvas").first.evaluate(
+    return plot_canvas(page, plot).evaluate(
         """(c, [fx, fy]) => {
             const d = c.getContext("2d").getImageData(
                 Math.round(fx * c.width), Math.round(fy * c.height), 1, 1).data;
