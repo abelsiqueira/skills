@@ -25,3 +25,22 @@ def drag_box(page, x0, y0, x1, y1):
 - **Make the image fill the canvas.** `mo.ui.matplotlib` maps the pointer across the whole canvas, so any margin around the image shifts every box. Remove the margins with `fig.subplots_adjust(0, 0, 1, 1)`. Give the figure the image's shape, `figsize=(height * w / h, height)`, so `imshow` adds no padding. If the shapes must differ, pass `aspect="auto"` to `imshow`, which stretches the image instead. With `extent=(0, w, h, 0)` as well, a selection comes back in image pixels: 0.2 of the canvas width is 0.2 times the image width.
 - **Fix the colour range.** `imshow` scales colours to the image's own range. A flat image has no range, so it renders in the lowest colour, which is black with `cmap="gray"`. Pass `vmin` and `vmax`, for example 0 and 255 for 8-bit images, and a blank page shows as it is. Dark lines on a light test image still help a person read the trace screenshots.
 - **Pixel size and on-screen size differ.** The canvas shows the figure's PNG at its pixel size, capped at the column width. Its `width` and `height` attributes give the PNG size, and `bounding_box()` gives the size on screen. `drag_box` uses `bounding_box()`, so fractions hold at any dpi. To keep the size on screen fixed when the dpi changes, wrap the widget in a fixed-width `div`: `mo.Html(f'<div style="width: 600px">{widget}</div>')`.
+
+## Checking what was drawn
+
+The canvas holds only pixels, so read them to check that a box is drawn. `locator.evaluate` runs on the element itself, so it reaches the canvas inside marimo's shadow root.
+
+```python
+def pixel(page, fx, fy):
+    """[r, g, b] at fraction (fx, fy) of the canvas."""
+    return page.locator("canvas").first.evaluate(
+        """(c, [fx, fy]) => {
+            const d = c.getContext("2d").getImageData(
+                Math.round(fx * c.width), Math.round(fy * c.height), 1, 1).data;
+            return [d[0], d[1], d[2]];
+        }""",
+        [fx, fy],
+    )
+```
+
+Retry until a timeout, because the redraw is not instant.
