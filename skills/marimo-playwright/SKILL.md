@@ -46,9 +46,11 @@ def get_free_port():
         return s.getsockname()[1]
 
 
-def wait_until_ready(port, timeout=60):
+def wait_until_ready(port, proc, timeout=60):
     end = time.monotonic() + timeout
     while time.monotonic() < end:
+        if proc.poll() is not None:
+            raise RuntimeError(f"marimo exited with code {proc.returncode}")
         try:
             urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=1)
             return
@@ -64,7 +66,7 @@ def serve(*app_args, notebook="notebooks/app.py", cwd=PROJECT):
            "--port", str(port), "--headless", "--", *app_args]
     proc = subprocess.Popen(cmd, cwd=cwd)
     try:
-        wait_until_ready(port)
+        wait_until_ready(port, proc)
         yield f"http://127.0.0.1:{port}"
     finally:
         proc.terminate()
